@@ -1,0 +1,14 @@
+{
+  "admin_ids": [
+    123456789
+  ],
+  "receiver_ids": [
+    123456789
+  ],
+  "is_private": 1,
+  "api_keys": [
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  ],
+  "cookies": "xxxxxxx"
+}
