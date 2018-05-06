@@ -30,11 +30,13 @@ class MsgService(Service):
         # self.msg.send('start')
 
     def run(self):
-        try:
-            self.parseMsg()
-            time.sleep(2)
-        except Exception as e:
-            self.log.error(e)
+        # try:
+        #     self.parseMsg()
+        #     time.sleep(2)
+        # except Exception as e:
+        #     self.log.error(e)
+        self.parseMsg()
+        time.sleep(2)
 
     # 解析消息
     def parseMsg(self):
@@ -66,7 +68,7 @@ class MsgService(Service):
         # 管理员命令
         ot = ''
         if text.find('#') == 0 \
-                and user_id == self.groupList[group_id]['admin'] or user_id in self.admin_ids:
+                and (user_id == self.groupList[group_id]['admin'] or user_id in self.admin_ids):
                 text = text[1:]
                 if user_id in self.admin_ids:
                     if text == '切换':
@@ -115,11 +117,8 @@ class MsgService(Service):
                 'csrf_token': self.msg.cookies['bili_jct']
             }
             response = requests.post(url, data=postData, cookies=self.cookies).json()
+            self.log.debug('[查询用户]'+response)
             self.userList[user_id] = [response['data'][str(user_id)]['info']['uname'], int(time.time())]
-            # self.log.success('查询用户：%d-->%s' % (user_id, self.userList[user_id]))
-        else:
-            # self.log.success('用户信息：%d-->%s' % (user_id, self.userList[user_id]))
-            pass
         return self.userList[user_id][0]
 
     # 获取群信息 群主&勋章名(替代群名)
@@ -132,11 +131,9 @@ class MsgService(Service):
                     'off': 0
                 }
             else:
-                url = 'https://api.vc.bilibili.com/link_group/v1/group/detail'
-                postData = {
-                    group_id: group_id
-                }
-                response = requests.get(url, data=postData, cookies=self.cookies).json()
+                url = 'https://api.vc.bilibili.com/link_group/v1/group/detail?group_id=%s' % str(group_id)
+                response = requests.get(url).json()
+                self.log.debug('[查询群]'+response)
                 self.groupList[group_id] = {
                     'admin': response['data']['owner_uid'],
                     'name': response['data']['fans_medal_name'],
