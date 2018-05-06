@@ -25,7 +25,7 @@ class MsgService(Service):
         self.cookies_str = self.config.get('cookies')
         self.userList = {}
 
-        self.is_off = 0
+        self.is_off = {}  # 开关列表
         self.is_private = self.config.get('is_private')
         # self.msg.send('start')
 
@@ -48,29 +48,29 @@ class MsgService(Service):
                     self.handler(text, msg['sender_uid'], 0)
                 pass
             # 应援团
-            elif msg['receiver_type'] == 2 and int(msg['receiver_id']) in self.receiver_ids:
-                if msg['msg_type'] == 1 and 'at_uids' in msg and self.uid in msg['at_uids']:
-                    # 处理 @昵称
+            elif msg['receiver_type'] == 2:
+                if (0 in self.receiver_ids or int(msg['receiver_id'] in self.receiver_ids)) \
+                        and msg['msg_type'] == 1 and 'at_uids' in msg and self.uid in msg['at_uids']:
+                    # 处理@
                     text = json.loads(msg['content'])['content'].lstrip()
-                    text = text.replace('\u0011', '')   # IOS客户端的@前后有这两个控制字符
+                    text = text.replace('\u0011', '')  # IOS客户端的@前后有这两个控制字符
                     text = text.replace('\u0012', '')
                     if text.find('@' + self.getUserName(self.uid)) == 0:
-                        text = text[len(self.getUserName(self.uid))+1:].lstrip()
+                        text = text[len(self.getUserName(self.uid)) + 1:].lstrip()
                         self.handler(text, msg['sender_uid'], msg['receiver_id'])
                 pass
         pass
 
     # 消息处理函数
     def handler(self, text, user_id, group_id):
-        ot = ''
         # 管理员命令
         if user_id in self.admin_ids and text.find('#') == 0:
             text = text[1:]
             if text == '睡觉':
-                self.is_off = 1
+                self.is_off[group_id] = 1
                 ot = '已准备睡觉，各位晚安~'
             elif text == '醒醒':
-                self.is_off = 0
+                self.is_off[group_id] = 0
                 ot = '又是全新的一天，早安！'
             elif text == '切换':
                 old = self.robot.swiRobot()
@@ -83,7 +83,9 @@ class MsgService(Service):
             if group_id == 0 and self.is_private == 0:
                 return
             # 睡觉
-            if self.is_off == 1:
+            if group_id not in self.is_off:
+                self.is_off[group_id] = 0
+            if self.is_off[group_id] == 1:
                 return
             if text == '':
                 text = '?'
