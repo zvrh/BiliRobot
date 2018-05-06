@@ -24,8 +24,8 @@ class MsgService(Service):
         self.receiver_ids = self.config.get('receiver_ids')
         self.cookies_str = self.config.get('cookies')
         self.userList = {}
+        self.groupList = {}
 
-        self.is_off = {}  # 开关列表
         self.is_private = self.config.get('is_private')
         # self.msg.send('start')
 
@@ -64,35 +64,38 @@ class MsgService(Service):
     # 消息处理函数
     def handler(self, text, user_id, group_id):
         # 管理员命令
-        if user_id in self.admin_ids and text.find('#') == 0:
-            text = text[1:]
-            if text == '睡觉':
-                self.is_off[group_id] = 1
-                ot = '已准备睡觉，各位晚安~'
-            elif text == '醒醒':
-                self.is_off[group_id] = 0
-                ot = '又是全新的一天，早安！'
-            elif text == '切换':
-                old = self.robot.swiRobot()
-                ot = '已从%d号切换到%d号（我比前一位聪明哦~）' % (old, self.robot.apiKeyNo)
-            else:
-                ot = '对方不想理你，并抛出了个未知的异常(◔◡◔)'
+        ot = ''
+        if text.find('#') == 0 \
+                and user_id == self.groupList[group_id]['admin'] or user_id in self.admin_ids:
+                text = text[1:]
+                if user_id in self.admin_ids:
+                    if text == '切换':
+                        old = self.robot.swiRobot()
+                        ot = '已从%d号切换到%d号（我比前一位聪明哦~）' % (old, self.robot.apiKeyNo)
+                if text == '睡觉':
+                    self.groupList[group_id]['off'] = 1
+                    ot = '已准备睡觉，各位晚安~'
+                elif text == '醒醒':
+                    self.groupList[group_id]['off'] = 0
+                    ot = '又是全新的一天，早安！'
+                if ot == '':
+                    ot = '对方不想理你，并抛出了个未知的异常(◔◡◔)'
         # 聊天
         else:
             # 私信关闭状态
             if group_id == 0 and self.is_private == 0:
                 return
             # 睡觉
-            if group_id not in self.is_off:
-                self.is_off[group_id] = 0
-            if self.is_off[group_id] == 1:
+            if group_id not in self.groupList:
+                self.getGroupDetail(group_id)
+            if self.groupList[group_id]['off'] == 1:
                 return
             if text == '':
                 text = '?'
             # 转发消息给机器人
-            self.log.success('[in][%s][%s] %s' % (str(group_id), self.getUserName(user_id), text))
+            self.log.success('[in][%s][%s] %s' % (self.groupList[group_id]['name'], self.getUserName(user_id), text))
             ot = self.robot.send(text, user_id, group_id)
-            self.log.success('[out][%s][%s] %s' % (str(group_id), self.getUserName(user_id), ot))
+            self.log.success('[out][%s][%s] %s' % (self.groupList[group_id]['name'], self.getUserName(user_id), ot))
         # 回复
         # 私信
         if group_id == 0:
@@ -118,3 +121,24 @@ class MsgService(Service):
             # self.log.success('用户信息：%d-->%s' % (user_id, self.userList[user_id]))
             pass
         return self.userList[user_id][0]
+
+    # 获取群信息 群主&勋章名(替代群名)
+    def getGroupDetail(self, group_id):
+        if group_id not in self.groupList:
+            if group_id == 0:
+                self.groupList[group_id] = {
+                    'admin': 0,
+                    'name': '私信',
+                    'off': 0
+                }
+            else:
+                url = 'https://api.vc.bilibili.com/link_group/v1/group/detail'
+                postData = {
+                    group_id: group_id
+                }
+                response = requests.get(url, data=postData, cookies=self.cookies).json()
+                self.groupList[group_id] = {
+                    'admin': response['data']['owner_uid'],
+                    'name': response['data']['fans_medal_name'],
+                    'off': 0
+                }
