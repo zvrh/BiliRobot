@@ -90,9 +90,9 @@ class MsgService(Service):
             if text == '':
                 text = '?'
             # 转发消息给机器人
-            self.log.success('收到消息：%s-->%s' % (self.getUserName(user_id), text))
+            self.log.success('[in][%s][%s] %s' % (str(group_id), self.getUserName(user_id), text))
             ot = self.robot.send(text, user_id, group_id)
-            self.log.success('回复消息：%s-->%s' % (self.getUserName(user_id), ot))
+            self.log.success('[out][%s][%s] %s' % (str(group_id), self.getUserName(user_id), ot))
         # 回复
         # 私信
         if group_id == 0:
@@ -103,7 +103,7 @@ class MsgService(Service):
 
     # 获取用户名 uid -> 昵称
     def getUserName(self, user_id):
-        # 每600s（10min）更新一次昵称
+        # 每300s（5min）更新一次昵称
         if user_id not in self.userList or self.userList[user_id][1] - int(time.time()) > 300:
             url = 'http://api.live.bilibili.com/user/v2/User/getMultiple'
             postData = {
