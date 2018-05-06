@@ -30,13 +30,11 @@ class MsgService(Service):
         # self.msg.send('start')
 
     def run(self):
-        # try:
-        #     self.parseMsg()
-        #     time.sleep(2)
-        # except Exception as e:
-        #     self.log.error(e)
-        self.parseMsg()
-        time.sleep(2)
+        try:
+            self.parseMsg()
+            time.sleep(2)
+        except Exception as e:
+            self.log.error(e)
 
     # 解析消息
     def parseMsg(self):
@@ -117,7 +115,7 @@ class MsgService(Service):
                 'csrf_token': self.msg.cookies['bili_jct']
             }
             response = requests.post(url, data=postData, cookies=self.cookies).json()
-            self.log.debug('[查询用户]'+response)
+            self.log.debug('[查询用户]'+str(response))
             self.userList[user_id] = [response['data'][str(user_id)]['info']['uname'], int(time.time())]
         return self.userList[user_id][0]
 
@@ -133,7 +131,7 @@ class MsgService(Service):
             else:
                 url = 'https://api.vc.bilibili.com/link_group/v1/group/detail?group_id=%s' % str(group_id)
                 response = requests.get(url).json()
-                self.log.debug('[查询群]'+response)
+                self.log.debug('[查询群]'+str(response))
                 self.groupList[group_id] = {
                     'admin': response['data']['owner_uid'],
                     'name': response['data']['fans_medal_name'],
