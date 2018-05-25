@@ -30,13 +30,13 @@ class MsgService(Service):
         # self.msg.send('start')
 
     def run(self):
-        self.parseMsg()
-        time.sleep(2)
-        # try:
-        #     self.parseMsg()
-        #     time.sleep(2)
-        # except Exception as e:
-        #     self.log.error(e)
+        # self.parseMsg()
+        # time.sleep(2)
+        try:
+            self.parseMsg()
+            time.sleep(2)
+        except Exception as e:
+            self.log.error(e)
 
     # 解析消息
     def parseMsg(self):
@@ -55,11 +55,11 @@ class MsgService(Service):
                         and msg['msg_type'] == 1:
                         # 检测并处理@
                         text = json.loads(msg['content'])['content'].lstrip()
-                        text = text.replace('\u0011', '')  # IOS客户端的@前后有这两个控制字符
-                        text = text.replace('\u0012', '')
-                        if text.find('@' + self.getUserName(self.uid)) == 0:
+                        if text.find('@' + self.getUserName(self.uid)) != -1:
+                            text = text.replace('\u0011', '')  # IOS客户端的@前后有这两个控制字符
+                            text = text.replace('\u0012', '')
+                            text = text.replace('@' + self.getUserName(self.uid), '').lstrip()
                             if 'at_uids' in msg and self.uid in msg['at_uids']:
-                                text = text[len(self.getUserName(self.uid)) + 1:].lstrip()
                                 self.handler(text, msg['sender_uid'], msg['receiver_id'])
                             else:
                                 self.handler('#冒泡', 0, msg['receiver_id'])
