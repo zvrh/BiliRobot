@@ -50,23 +50,26 @@ class MsgService(Service):
             # 应援团
             elif msg['receiver_type'] == 2:
                 if (0 in self.receiver_ids or int(msg['receiver_id'] in self.receiver_ids)) \
-                        and msg['msg_type'] == 1 and 'at_uids' in msg and self.uid in msg['at_uids']:
-                    # 处理@
-                    text = json.loads(msg['content'])['content'].lstrip()
-                    text = text.replace('\u0011', '')  # IOS客户端的@前后有这两个控制字符
-                    text = text.replace('\u0012', '')
-                    if text.find('@' + self.getUserName(self.uid)) == 0:
-                        text = text[len(self.getUserName(self.uid)) + 1:].lstrip()
-                        self.handler(text, msg['sender_uid'], msg['receiver_id'])
+                        and msg['msg_type'] == 1:
+                        # 检测并处理@
+                        text = json.loads(msg['content'])['content'].lstrip()
+                        text = text.replace('\u0011', '')  # IOS客户端的@前后有这两个控制字符
+                        text = text.replace('\u0012', '')
+                        if text.find('@' + self.getUserName(self.uid)) == 0:
+                            if 'at_uids' in msg and self.uid in msg['at_uids']:
+                                text = text[len(self.getUserName(self.uid)) + 1:].lstrip()
+                                self.handler(text, msg['sender_uid'], msg['receiver_id'])
+                            else:
+                                self.handler('#冒泡', 0, msg['receiver_id'])
                 pass
         pass
 
     # 消息处理函数
     def handler(self, text, user_id, group_id):
-        # 管理员命令
+        # 命令
         ot = ''
-        if text.find('#') == 0 \
-                and (user_id == self.groupList[group_id]['admin'] or user_id in self.admin_ids):
+        if text.find('#') == 0 and \
+                (user_id == self.groupList[group_id]['admin'] or user_id in self.admin_ids or user_id == 0):
                 text = text[1:]
                 if user_id in self.admin_ids:
                     if text == '切换':
@@ -78,6 +81,8 @@ class MsgService(Service):
                 elif text == '醒醒':
                     self.groupList[group_id]['off'] = 0
                     ot = '又是全新的一天，早安！'
+                elif text == '冒泡':
+                    ot = '敢不敢长按我的头像试试？'
                 if ot == '':
                     ot = '对方不想理你，并抛出了个未知的异常(◔◡◔)'
         # 聊天
