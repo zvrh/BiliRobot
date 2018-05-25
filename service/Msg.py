@@ -30,11 +30,13 @@ class MsgService(Service):
         # self.msg.send('start')
 
     def run(self):
-        try:
-            self.parseMsg()
-            time.sleep(2)
-        except Exception as e:
-            self.log.error(e)
+        self.parseMsg()
+        time.sleep(2)
+        # try:
+        #     self.parseMsg()
+        #     time.sleep(2)
+        # except Exception as e:
+        #     self.log.error(e)
 
     # 解析消息
     def parseMsg(self):
@@ -66,23 +68,27 @@ class MsgService(Service):
 
     # 消息处理函数
     def handler(self, text, user_id, group_id):
-        # 命令
+        if group_id not in self.groupList:
+            self.getGroupDetail(group_id)
         ot = ''
+        # 命令
         if text.find('#') == 0 and \
                 (user_id == self.groupList[group_id]['admin'] or user_id in self.admin_ids or user_id == 0):
                 text = text[1:]
-                if user_id in self.admin_ids:
+                if user_id == 0:
+                    if text == '冒泡':
+                        ot = '敢不敢长按我的头像试试？'
+                elif user_id in self.admin_ids:
                     if text == '切换':
                         old = self.robot.swiRobot()
                         ot = '已从%d号切换到%d号（我比前一位聪明哦~）' % (old, self.robot.apiKeyNo)
+                #
                 if text == '睡觉':
                     self.groupList[group_id]['off'] = 1
                     ot = '已准备睡觉，各位晚安~'
                 elif text == '醒醒':
                     self.groupList[group_id]['off'] = 0
                     ot = '又是全新的一天，早安！'
-                elif text == '冒泡':
-                    ot = '敢不敢长按我的头像试试？'
                 if ot == '':
                     ot = '对方不想理你，并抛出了个未知的异常(◔◡◔)'
         # 聊天
@@ -91,8 +97,6 @@ class MsgService(Service):
             if group_id == 0 and self.is_private == 0:
                 return
             # 睡觉
-            if group_id not in self.groupList:
-                self.getGroupDetail(group_id)
             if self.groupList[group_id]['off'] == 1:
                 return
             if text == '':
@@ -107,7 +111,10 @@ class MsgService(Service):
             self.msg.send(ot, user_id, receiver_type=1)
         # 群聊
         else:
-            self.msg.send('@%s %s' % (self.getUserName(user_id), ot), group_id, receiver_type=2, at_uid=user_id)
+            if user_id == 0:
+                self.msg.send(ot, group_id, receiver_type=2)
+            else:
+                self.msg.send('@%s %s' % (self.getUserName(user_id), ot), group_id, receiver_type=2, at_uid=user_id)
 
     # 获取用户名 uid -> 昵称
     def getUserName(self, user_id):
