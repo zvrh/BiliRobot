@@ -53,16 +53,16 @@ class MsgService(Service):
             elif msg['receiver_type'] == 2:
                 if (0 in self.receiver_ids or int(msg['receiver_id'] in self.receiver_ids)) \
                         and msg['msg_type'] == 1:
-                        # 检测并处理@
-                        text = json.loads(msg['content'])['content'].lstrip()
-                        if text.find('@' + self.getUserName(self.uid)) != -1:
-                            text = text.replace('\u0011', '')  # IOS客户端的@前后有这两个控制字符
-                            text = text.replace('\u0012', '')
-                            text = text.replace('@' + self.getUserName(self.uid), '').lstrip()
-                            if 'at_uids' in msg and self.uid in msg['at_uids']:
-                                self.handler(text, msg['sender_uid'], msg['receiver_id'])
-                            else:
-                                self.handler('#冒泡', 0, msg['receiver_id'])
+                    # 检测并处理@
+                    text = json.loads(msg['content'])['content'].lstrip()
+                    if text.find('@' + self.getUserName(self.uid)) != -1:
+                        text = text.replace('\u0011', '')  # IOS客户端的@前后有这两个控制字符
+                        text = text.replace('\u0012', '')
+                        text = text.replace('@' + self.getUserName(self.uid), '').lstrip()
+                        if 'at_uids' in msg and self.uid in msg['at_uids']:
+                            self.handler(text, msg['sender_uid'], msg['receiver_id'])
+                        else:
+                            self.handler('#冒泡', 0, msg['receiver_id'])
                 pass
         pass
 
@@ -70,27 +70,9 @@ class MsgService(Service):
     def handler(self, text, user_id, group_id):
         if group_id not in self.groupList:
             self.getGroupDetail(group_id)
-        ot = ''
         # 命令
-        if text.find('#') == 0 and \
-                (user_id == self.groupList[group_id]['admin'] or user_id in self.admin_ids or user_id == 0):
-                text = text[1:]
-                if user_id == 0:
-                    if text == '冒泡':
-                        ot = '敢不敢长按我的头像试试？'
-                elif user_id in self.admin_ids:
-                    if text == '切换':
-                        old = self.robot.swiRobot()
-                        ot = '已从%d号切换到%d号（我比前一位聪明哦~）' % (old, self.robot.apiKeyNo)
-                #
-                if text == '睡觉':
-                    self.groupList[group_id]['off'] = 1
-                    ot = '已准备睡觉，各位晚安~'
-                elif text == '醒醒':
-                    self.groupList[group_id]['off'] = 0
-                    ot = '又是全新的一天，早安！'
-                if ot == '':
-                    ot = '对方不想理你，并抛出了个未知的异常(◔◡◔)'
+        if text.find('#') == 0:
+            ot = self.cmd(text, user_id, group_id)
         # 聊天
         else:
             # 私信关闭状态
@@ -116,6 +98,49 @@ class MsgService(Service):
             else:
                 self.msg.send('@%s %s' % (self.getUserName(user_id), ot), group_id, receiver_type=2, at_uid=user_id)
 
+    # 执行命令
+    def cmd(self, text, user_id, group_id):
+        ot = '你的py值不够，请及时充值[doge]'
+        # 管理员
+        if user_id in self.admin_ids:
+            if text == '#睡觉':
+                self.groupList[group_id]['off'] = 1
+                ot = '已准备睡觉，各位晚安~'
+            elif text == '#醒醒':
+                self.groupList[group_id]['off'] = 0
+                ot = '又是全新的一天，早安！'
+            elif text == '#切换':
+                old = self.robot.swiRobot()
+                ot = '已从%d号切换到%d号（我比前一位聪明哦~）' % (old, self.robot.apiKeyNo)
+            elif text[:4] == '#睡觉:' and text[4:].isdigit() and group_id == 0:
+                group_id = int(text[4:])
+                print(group_id)
+                if self.getGroupDetail(group_id) == 0:
+                    self.groupList[group_id]['off'] = 1
+                    ot = self.groupList[group_id]['name'] + " 已睡觉"
+            elif text[:4] == '#醒醒:' and text[4:].isdigit() and group_id == 0:
+                group_id = int(text[4:])
+                if self.getGroupDetail(group_id) == 0:
+                    self.groupList[group_id]['off'] = 0
+                    ot = self.groupList[group_id]['name'] + " 已睡醒"
+
+        # 群主
+        elif user_id == self.groupList[group_id]['admin']:
+            if text == '#睡觉':
+                self.groupList[group_id]['off'] = 1
+                ot = '已准备睡觉，各位晚安~'
+            elif text == '#醒醒':
+                self.groupList[group_id]['off'] = 0
+                ot = '又是全新的一天，早安！'
+            pass
+
+        # 系统
+        elif user_id == 0:
+            if text == '#冒泡':
+                ot = '敢不敢长按我的头像试试？'
+            pass
+        return ot
+
     # 获取用户名 uid -> 昵称
     def getUserName(self, user_id):
         # 每300s（5min）更新一次昵称
@@ -127,7 +152,7 @@ class MsgService(Service):
                 'csrf_token': self.msg.cookies['bili_jct']
             }
             response = requests.post(url, data=postData, cookies=self.cookies).json()
-            self.log.debug('[查询用户]'+str(response))
+            self.log.debug('[查询用户]' + str(response))
             self.userList[user_id] = [response['data'][str(user_id)]['info']['uname'], int(time.time())]
         return self.userList[user_id][0]
 
@@ -143,9 +168,12 @@ class MsgService(Service):
             else:
                 url = 'https://api.vc.bilibili.com/link_group/v1/group/detail?group_id=%s' % str(group_id)
                 response = requests.get(url).json()
-                self.log.debug('[查询群]'+str(response))
-                self.groupList[group_id] = {
-                    'admin': response['data']['owner_uid'],
-                    'name': response['data']['fans_medal_name'],
-                    'off': 0
-                }
+                self.log.debug('[查询群]' + str(response))
+                if response['code'] == 0:
+                    self.groupList[group_id] = {
+                        'admin': response['data']['owner_uid'],
+                        'name': response['data']['fans_medal_name'],
+                        'off': 0
+                    }
+                return response['code']
+        return 0
