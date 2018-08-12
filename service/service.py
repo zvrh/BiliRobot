@@ -1,7 +1,10 @@
 import threading
 
 
-class Service(object):
+class Service:
+    def __init__(self):
+        self.threadRun = False
+
     def start(self):
         self.threadRun = True
         threading.Thread(target=self.__run).start()

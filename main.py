@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 import signal
-from util.Log import Log
-from service.Msg import MsgService
+from util.log import Log
+from service.msg import MsgService
 
-log = Log('Main')
+log = Log('main')
 msgService = MsgService()
 
 

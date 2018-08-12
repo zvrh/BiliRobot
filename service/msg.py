@@ -1,21 +1,22 @@
 import time
 import json
 import requests
-from service.Service import Service
-from util.Config import Config
-from util.Log import Log
-from util.Msg import Msg
-from util.Robot import Robot
+from service.service import Service
+from util.config import Config
+from util.log import Log
+from util.msg import Msg
+from util.robot import Robot
 
 
 class MsgService(Service):
 
     def __init__(self):
+        super().__init__()
         # 初始化变量
-        self.config = Config()
-        self.cookies = self.config.getCookies()
+        self.config = Config('config.json')
+        self.cookies = self.config.get_cookies()
 
-        self.log = Log('service/Msg')
+        self.log = Log(__name__)
         self.msg = Msg(self.cookies)
         self.robot = Robot(self.config.get('api_keys'))
 
